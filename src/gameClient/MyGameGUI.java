@@ -22,7 +22,7 @@ public class MyGameGUI {
      */
     public static void main(String[] args){
         MyGameGUI mg = new MyGameGUI();
-        boolean auto = false;
+        boolean auto = true;
         mg.start(auto);
     }
     // initialize game
@@ -99,12 +99,10 @@ public class MyGameGUI {
 
         if(auto){
             addRobotsAuto();
-            playAuto();
+            playManual();
         }
         else{
-            // first add all the robots
             addRobotsManual();
-            // start game
             playManual();
         }
 
@@ -145,12 +143,57 @@ public class MyGameGUI {
 
     // add robots close to fruit
     private void addRobotsAuto(){
+        while(!game.isRunning()) {
+            List<String> fruit = game.getFruits();
+            Iterator<String> itr = fruit.iterator();
+            while (itr.hasNext()) {
+                oop_edge_data e = Robot_Algs.findFruitEdge(itr.next(), gg, eps*0.01);
+                if (e != null) {
+                    boolean added = game.addRobot(e.getSrc());
+                    game.startGame();
+                    if (added) {
+                        System.out.println("Robot added on node " + e.getSrc());
+                    } else
+                        break;
+                }
+
+            }
+        }
+
+            // in case there are no fruit we add the robots manually
+            while(!game.isRunning()){
+                for (int i = 0; i < gg.getV().size(); i++) {
+                    boolean added = game.addRobot(i);
+                    game.startGame();
+                    if (added) {
+                        System.out.println("Robot added on node " + i);
+                    } else
+                        break;
+                }
+            }
+
+
+            System.out.println("Added all robots.");
 
     }
 
     private void playAuto(){
+        while (game.isRunning()) {
+            OOP_Point3D p1, p2;
+            List<String> log = game.move();
+            if (log != null) {
 
+
+            }
+
+            // draw
+            StdDraw.clear();
+            draw(gg, game, log, eps, topMidP);
+            StdDraw.show();
+            StdDraw.pause(20);
+        }
     }
+
 
     private void playManual(){
 
@@ -171,7 +214,7 @@ public class MyGameGUI {
                     // check click, not drag
                     if (p1.close2equals(p2)) {
                         // check that a robot was clicked
-                        int id = closeToRobot(log, p1, eps * 1.5);
+                        int id = Robot_Algs.closeToRobot(log, p1, eps * 1.5);
                         if (id != -1) {
                             // get robot source node
                             int key = -1;
@@ -242,25 +285,7 @@ public class MyGameGUI {
         return -1;
     }
 
-    // go over all robots, see whether any one is close to p, return robot id if so
-    private static int closeToRobot(List<String> robots_json, OOP_Point3D p, double eps){
-        for (int i = 0; i < robots_json.size(); i++) {
-            try {
-                JSONObject r = new JSONObject(robots_json.get(i));
-                String pos = r.getJSONObject("Robot").getString("pos");
-                String[] xAndY = pos.split(",");
-                OOP_Point3D pr = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
-                if(pr.distance3D(p) < eps){
-                    return r.getJSONObject("Robot").getInt("id");
-                }
 
-            }
-            catch (JSONException e){
-                System.out.println(e);
-            }
-        }
-        return -1;
-    }
 
     private static void draw(OOP_DGraph gg, game_service game, List<String> robots_json, double eps, OOP_Point3D topMid) {
         Iterator<oop_node_data> itr1;
@@ -279,7 +304,7 @@ public class MyGameGUI {
             StdDraw.point(p1.x(), p1.y());
             // Annotate
             StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
-            StdDraw.text(p1.x(), p1.y() + eps, "" + n.getKey());
+            StdDraw.text(p1.x(), p1.y() + eps*0.5, "" + n.getKey());
         }
         // draw edges
         itr1 = gg.getV().iterator();
