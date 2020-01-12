@@ -196,7 +196,6 @@ public class MyGameGUI {
 
 
     private void playManual(){
-
         while (game.isRunning()) {
             OOP_Point3D p1, p2;
             List<String> log = game.move();
