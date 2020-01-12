@@ -11,7 +11,8 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Robot_Algs {
-    public List<oop_node_data> pathToNearestFruit(String robot_json, List<String> fruit, OOP_DGraph graph) {
+    public static List<oop_node_data> pathToNearestFruit(String robot_json, List<String> fruits, OOP_DGraph graph) {
+        List<oop_node_data> path;
         return null;
     }
 

@@ -106,6 +106,7 @@ public class MyGameGUI {
             playManual();
         }
 
+
     }
     private void addRobotsManual(){
         while (!game.isRunning()) {
@@ -176,14 +177,50 @@ public class MyGameGUI {
             System.out.println("Added all robots.");
 
     }
-
+    //Go over robots, for every robot that is not moving get next move using function
+    //cache paths, only when fruit list changes calculate new path
     private void playAuto(){
+        // list of robot paths
+        List<String> robots_json = game.getRobots();
+        List<oop_node_data>[] robotPaths = new List<oop_node_data>[robots_json.size()];
+        //List<List<oop_node_data>> robotPaths = new ArrayList<>();
+        List<String> fruits_cache = null;
         while (game.isRunning()) {
-            OOP_Point3D p1, p2;
             List<String> log = game.move();
-            if (log != null) {
+            List<String> robots_json = game.getRobots();
+            List<String> fruits_json = game.getFruits();
+            // for every time a fruit is eaten, calculate new paths for all robots
+            if(fruits_json != fruits_cache){
+                fruits_cache = fruits_json;
+                robotPaths = new ArrayList<>();
+                for (int i = 0; i < robots_json.size(); i++) {
+                    try {
+                        JSONObject r = new JSONObject(robots_json.get(i));
+                        String pos = r.getJSONObject("Robot").getString("pos");
+                        double speed = r.getJSONObject("Robot").getDouble("speed");
+                        // check that robot is not moving
+                        if(speed == 0){
+                            robotPaths.add(Robot_Algs.pathToNearestFruit(robots_json.get(i), fruits_json, gg));
+                        }
 
+                    } catch (JSONException jsonException) {
+                        System.out.println(jsonException);
+                    }
+                }
+            }
+            for (int i = 0; i < robots_json.size(); i++) {
+                try {
+                    JSONObject r = new JSONObject(robots_json.get(i));
+                    int id = r.getJSONObject("Robot").getInt("id");
+                    double speed = r.getJSONObject("Robot").getDouble("speed");
+                    // check that robot is not moving
+                    if(speed == 0){
+                        game.chooseNextEdge(id, );
+                    }
 
+                } catch (JSONException jsonException) {
+                    System.out.println(jsonException);
+                }
             }
 
             // draw
@@ -351,15 +388,22 @@ public class MyGameGUI {
         }
         // draw robots
         if(robots_json != null) {
+            StdDraw.setPenColor(StdDraw.BLACK);
+            StdDraw.text(topMid.x(), topMid.y() , "Scores:");
             for (int i = 0; i < robots_json.size(); i++) {
                 try {
                     JSONObject r = new JSONObject(robots_json.get(i));
+                    //System.out.println(r);
                     String pos = r.getJSONObject("Robot").getString("pos");
+                    int score = r.getJSONObject("Robot").getInt("value");
+                    int id = r.getJSONObject("Robot").getInt("id");
                     String[] xAndY = pos.split(",");
                     p1 = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
                     StdDraw.setPenColor(intToColor(i));
                     StdDraw.setPenRadius(0.004);
                     StdDraw.circle(p1.x(), p1.y(), 0.00015);
+                    StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
+                    StdDraw.text(topMid.x(), topMid.y() - eps*(id+1), "Robot "+id+": "+score+" points");
 
                 } catch (JSONException jsonException) {
                     System.out.println(jsonException);
@@ -367,9 +411,10 @@ public class MyGameGUI {
 
             }
         }
-
+        StdDraw.setPenColor(StdDraw.BLACK);
         StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
         StdDraw.text(topMid.x(), topMid.y() + eps, String.valueOf(game.timeToEnd()));
+
     }
     private static Color intToColor(int i){
         int cn = i%8;
