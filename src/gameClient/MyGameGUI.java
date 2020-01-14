@@ -72,8 +72,9 @@ public class MyGameGUI {
                 yMin = l.y();
             }
         }
-        xLen = xMax - xMin;
-        yLen = yMax - yMin;
+        // get lengths of coordinate axises
+        double xLen = xMax - xMin;
+        double yLen = yMax - yMin;
         // add margin
         double xMargin = 0.05*xLen;
         double yMargin = 0.05*yLen;
@@ -83,9 +84,10 @@ public class MyGameGUI {
         yMin = yMin - yMargin;
         xLen = xMax - xMin;
         yLen = yMax - yMin;
+        // set useful parameters
         XYRatio = xLen/yLen;
-        eps = xLen*0.03;
-        topMidP = new OOP_Point3D((xMax+xMin)/2, yMax - 2*eps);
+        eps = xLen*0.01;
+        textPos = new OOP_Point3D((xMax+xMin)/2, yMax - 2*eps);
 
     }
 
@@ -99,7 +101,7 @@ public class MyGameGUI {
 
         if(auto){
             addRobotsAuto();
-            playManual();
+            playAuto();
         }
         else{
             addRobotsManual();
@@ -108,6 +110,85 @@ public class MyGameGUI {
 
 
     }
+
+
+    // add robots close to fruit
+    private void addRobotsAuto(){
+        while(!game.isRunning()) {
+            List<String> fruit = game.getFruits();
+            Iterator<String> itr = fruit.iterator();
+            while (itr.hasNext()) {
+                oop_edge_data e = Robot_Algs.findFruitEdge(itr.next(), gg);
+                if (e != null) {
+                    boolean added = game.addRobot(e.getSrc());
+                    game.startGame();
+                    if (added) {
+                        System.out.println("Robot added on node " + e.getSrc());
+                    } else
+                        break;
+                }
+
+            }
+        }
+
+        // in case there are no fruit we add the robots manually
+        while(!game.isRunning()){
+            for (int i = 0; i < gg.getV().size(); i++) {
+                boolean added = game.addRobot(i);
+                game.startGame();
+                if (added) {
+                    System.out.println("Robot added on node " + i);
+                } else
+                    break;
+            }
+        }
+
+
+        System.out.println("Added all robots.");
+
+    }
+    //Go over robots, for every robot that is not moving get next move using function
+    private void playAuto(){
+        while (game.isRunning()) {
+            List<String> log = game.move();
+            // get robots and fruit from game
+            List<String> robots_json = game.getRobots();
+            List<String> fruits_json = game.getFruits();
+            // go over robots
+            for (int i = 0; i < robots_json.size(); i++) {
+                try {
+                    // get robot info
+                    JSONObject r = new JSONObject(robots_json.get(i));
+                    int id = r.getJSONObject("Robot").getInt("id");
+                    int dest = r.getJSONObject("Robot").getInt("dest");
+                    // check that robot is not moving
+                    if(dest == -1){
+                        // get path for this robot
+                        List<oop_node_data> path = Robot_Algs.pathToNearestFruit(robots_json.get(i),
+                                fruits_json, game.getGraph());
+                        // move
+                        long move = game.chooseNextEdge(id, path.get(0).getKey());
+                        // check that robot moved
+                        if(move != -1)
+                            System.out.println("Next node for " + id + " is " + path.get(0).getKey());
+                        else
+                            System.out.println("Robot " +id + " tries to go to node "
+                                    + path.get(0).getKey() + ", but can't!");
+                    }
+
+                } catch (JSONException jsonException) {
+                    System.out.println(jsonException);
+                }
+            }
+            // draw
+            StdDraw.clear();
+            draw(gg, game, log, eps, textPos);
+            StdDraw.show();
+            StdDraw.pause(20);
+        }
+    }
+
+
     private void addRobotsManual(){
         while (!game.isRunning()) {
             // when mouse is pressed
@@ -134,7 +215,7 @@ public class MyGameGUI {
             }
 
             StdDraw.clear();
-            draw(gg, game, null, eps, topMidP);
+            draw(gg, game, null, eps, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -142,94 +223,6 @@ public class MyGameGUI {
         System.out.println("All robots have been added!");
     }
 
-    // add robots close to fruit
-    private void addRobotsAuto(){
-        while(!game.isRunning()) {
-            List<String> fruit = game.getFruits();
-            Iterator<String> itr = fruit.iterator();
-            while (itr.hasNext()) {
-                oop_edge_data e = Robot_Algs.findFruitEdge(itr.next(), gg, eps*0.01);
-                if (e != null) {
-                    boolean added = game.addRobot(e.getSrc());
-                    game.startGame();
-                    if (added) {
-                        System.out.println("Robot added on node " + e.getSrc());
-                    } else
-                        break;
-                }
-
-            }
-        }
-
-            // in case there are no fruit we add the robots manually
-            while(!game.isRunning()){
-                for (int i = 0; i < gg.getV().size(); i++) {
-                    boolean added = game.addRobot(i);
-                    game.startGame();
-                    if (added) {
-                        System.out.println("Robot added on node " + i);
-                    } else
-                        break;
-                }
-            }
-
-
-            System.out.println("Added all robots.");
-
-    }
-    //Go over robots, for every robot that is not moving get next move using function
-    //cache paths, only when fruit list changes calculate new path
-    private void playAuto(){
-        // list of robot paths
-        List<String> robots_json = game.getRobots();
-        List<oop_node_data>[] robotPaths = new List<oop_node_data>[robots_json.size()];
-        //List<List<oop_node_data>> robotPaths = new ArrayList<>();
-        List<String> fruits_cache = null;
-        while (game.isRunning()) {
-            List<String> log = game.move();
-            List<String> robots_json = game.getRobots();
-            List<String> fruits_json = game.getFruits();
-            // for every time a fruit is eaten, calculate new paths for all robots
-            if(fruits_json != fruits_cache){
-                fruits_cache = fruits_json;
-                robotPaths = new ArrayList<>();
-                for (int i = 0; i < robots_json.size(); i++) {
-                    try {
-                        JSONObject r = new JSONObject(robots_json.get(i));
-                        String pos = r.getJSONObject("Robot").getString("pos");
-                        double speed = r.getJSONObject("Robot").getDouble("speed");
-                        // check that robot is not moving
-                        if(speed == 0){
-                            robotPaths.add(Robot_Algs.pathToNearestFruit(robots_json.get(i), fruits_json, gg));
-                        }
-
-                    } catch (JSONException jsonException) {
-                        System.out.println(jsonException);
-                    }
-                }
-            }
-            for (int i = 0; i < robots_json.size(); i++) {
-                try {
-                    JSONObject r = new JSONObject(robots_json.get(i));
-                    int id = r.getJSONObject("Robot").getInt("id");
-                    double speed = r.getJSONObject("Robot").getDouble("speed");
-                    // check that robot is not moving
-                    if(speed == 0){
-                        game.chooseNextEdge(id, );
-                    }
-
-                } catch (JSONException jsonException) {
-                    System.out.println(jsonException);
-                }
-            }
-
-            // draw
-            StdDraw.clear();
-            draw(gg, game, log, eps, topMidP);
-            StdDraw.show();
-            StdDraw.pause(20);
-        }
-    }
 
 
     private void playManual(){
@@ -302,7 +295,7 @@ public class MyGameGUI {
 
             // draw
             StdDraw.clear();
-            draw(gg, game, log, eps, topMidP);
+            draw(gg, game, log, eps, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -429,15 +422,16 @@ public class MyGameGUI {
         else {return StdDraw.PRINCETON_ORANGE; }
     }
 
-    private double xMax = 0;
-    private double xMin = 0;
-    private double yMax = 0;
-    private double yMin = 0;
-    private double XYRatio = 0;
-    private double eps = 0.03;
-    private double xLen = 0;
-    private double yLen = 0;
-    private OOP_Point3D topMidP;
+    private double xMax;
+    private double xMin;
+    private double yMax;
+    private double yMin;
+    // x/y
+    private double XYRatio;
+    // hundredth of x length
+    private double eps;
+    // position for text on screen
+    private OOP_Point3D textPos;
     private OOP_DGraph gg;
     private transient int mc;
     private game_service game;
