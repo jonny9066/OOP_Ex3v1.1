@@ -12,6 +12,7 @@ import utils.StdDraw;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.List;
 
@@ -22,8 +23,7 @@ public class MyGameGUI {
      */
     public static void main(String[] args){
         MyGameGUI mg = new MyGameGUI();
-        boolean auto = true;
-        mg.start(auto);
+        mg.startAuto();
     }
     // initialize game
     public MyGameGUI() {
@@ -47,6 +47,8 @@ public class MyGameGUI {
         String g = game.getGraph();
         gg = new OOP_DGraph();
         gg.init(g);
+        // initialize kml logger
+        kml_log = new KML_Logger(String.valueOf(level), gg);
         // grt parameters for window size
         Iterator<oop_node_data> itr = gg.getV().iterator();
         OOP_Point3D l;
@@ -90,9 +92,14 @@ public class MyGameGUI {
         textPos = new OOP_Point3D((xMax+xMin)/2, yMax - 2*eps);
 
     }
+    public void startAuto(){
+        start(true);
+    }
+    public void startManual(){
+        start(false);
+    }
 
-    public void start(boolean auto) {
-        String g;
+    private void start(boolean auto) {
         // enable to draw off screen
         StdDraw.enableDoubleBuffering();
         StdDraw.setCanvasSize((int)(500 * XYRatio), 500);
@@ -106,6 +113,11 @@ public class MyGameGUI {
         else{
             addRobotsManual();
             playManual();
+        }
+        try {
+            kml_log.saveKML();
+        }catch (FileNotFoundException exc){
+            System.out.println(exc);
         }
 
 
@@ -151,9 +163,8 @@ public class MyGameGUI {
     private void playAuto(){
         while (game.isRunning()) {
             List<String> log = game.move();
-            // get robots and fruit from game
+            // get robots from game
             List<String> robots_json = game.getRobots();
-            List<String> fruits_json = game.getFruits();
             // go over robots
             for (int i = 0; i < robots_json.size(); i++) {
                 try {
@@ -164,16 +175,15 @@ public class MyGameGUI {
                     // check that robot is not moving
                     if(dest == -1){
                         // get path for this robot
-                        List<oop_node_data> path = Robot_Algs.pathToNearestFruit(robots_json.get(i),
-                                fruits_json, game.getGraph());
                         // move
-                        long move = game.chooseNextEdge(id, path.get(0).getKey());
+                        oop_node_data nn = Robot_Algs.nextNode(robots_json.get(i), game.getFruits(), game.getGraph());
+                        long move = game.chooseNextEdge(id, nn.getKey());
                         // check that robot moved
                         if(move != -1)
-                            System.out.println("Next node for " + id + " is " + path.get(0).getKey());
+                            System.out.println("Next node for " + id + " is " + nn.getKey());
                         else
                             System.out.println("Robot " +id + " tries to go to node "
-                                    + path.get(0).getKey() + ", but can't!");
+                                    + nn.getKey() + ", but can't!");
                     }
 
                 } catch (JSONException jsonException) {
@@ -182,7 +192,7 @@ public class MyGameGUI {
             }
             // draw
             StdDraw.clear();
-            draw(gg, game, log, eps, textPos);
+            draw(gg, game, log, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -215,7 +225,7 @@ public class MyGameGUI {
             }
 
             StdDraw.clear();
-            draw(gg, game, null, eps, textPos);
+            draw(gg, game, null, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -295,7 +305,7 @@ public class MyGameGUI {
 
             // draw
             StdDraw.clear();
-            draw(gg, game, log, eps, textPos);
+            draw(gg, game, log, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -316,7 +326,8 @@ public class MyGameGUI {
 
 
 
-    private static void draw(OOP_DGraph gg, game_service game, List<String> robots_json, double eps, OOP_Point3D topMid) {
+    private static void draw(OOP_DGraph gg, game_service game, List<String> robots_json, double eps,
+                             KML_Logger kml_log, OOP_Point3D topMid) {
         Iterator<oop_node_data> itr1;
         Iterator<oop_edge_data> itr2;
         oop_node_data n;
@@ -358,7 +369,7 @@ public class MyGameGUI {
 
             }
         }
-        // draw fruit
+        // draw fruit and log in kml
         java.util.List<String> fruit = game.getFruits();
         for (int i = 0; i < fruit.size(); i++) {
             try {
@@ -370,23 +381,25 @@ public class MyGameGUI {
                 // type is dest - src of fruit's edge, if negative then src > dest and we mark it banana
                 if(type < 0){
                     StdDraw.picture(p1.x(), p1.y(), "banana.png", 0.0004, 0.0003);
+                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Banana");
                 }
-                else
+                else {
                     StdDraw.picture(p1.x(), p1.y(), "apple.png", 0.0004, 0.0004);
+                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Apple");
+                }
 
             } catch (JSONException jsonException) {
                 System.out.println(jsonException);
             }
 
         }
-        // draw robots
+        // draw robots and log in kml
         if(robots_json != null) {
             StdDraw.setPenColor(StdDraw.BLACK);
             StdDraw.text(topMid.x(), topMid.y() , "Scores:");
             for (int i = 0; i < robots_json.size(); i++) {
                 try {
                     JSONObject r = new JSONObject(robots_json.get(i));
-                    //System.out.println(r);
                     String pos = r.getJSONObject("Robot").getString("pos");
                     int score = r.getJSONObject("Robot").getInt("value");
                     int id = r.getJSONObject("Robot").getInt("id");
@@ -395,8 +408,11 @@ public class MyGameGUI {
                     StdDraw.setPenColor(intToColor(i));
                     StdDraw.setPenRadius(0.004);
                     StdDraw.circle(p1.x(), p1.y(), 0.00015);
+                    // draw score for robot
                     StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
                     StdDraw.text(topMid.x(), topMid.y() - eps*(id+1), "Robot "+id+": "+score+" points");
+                    // log
+                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Robot "+ String.valueOf(id));
 
                 } catch (JSONException jsonException) {
                     System.out.println(jsonException);
@@ -433,6 +449,6 @@ public class MyGameGUI {
     // position for text on screen
     private OOP_Point3D textPos;
     private OOP_DGraph gg;
-    private transient int mc;
     private game_service game;
+    private KML_Logger kml_log;
 }

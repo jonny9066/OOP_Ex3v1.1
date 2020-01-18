@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import java.util.*;
 
 public class Robot_Algs {
-    public static List<oop_node_data> pathToNearestFruit(String robot_json, List<String> fruits, String g) {
+    public static oop_node_data nextNode(String robot_json, List<String> fruits, String g) {
         List<oop_node_data> path = new ArrayList<>();
         try {
             // create a new graph to run dijkstra on
@@ -24,27 +24,27 @@ public class Robot_Algs {
             DijkstraAlg(gg, source);
             // get edge for first fruit, we assume there is at least 1 fruit
             //System.out.println(fruits.get(0));
-            oop_edge_data closest_fruit_edge = findFruitEdge(fruits.get(0), gg);
-            if(closest_fruit_edge == null){
-                throw new  RuntimeException("findFruitEdge method failed!");
-            }
+            oop_edge_data closest_fruit_edge = null;
             // compare with other fruit edges to get closest fruit
-            for (int i = 1; i < fruits.size(); i++) {
+            for (int i = 0; i < fruits.size(); i++) {
                 oop_edge_data temp_fruit_edge = findFruitEdge(fruits.get(i), gg);
-                if(temp_fruit_edge == null){
-                    throw new  RuntimeException("findFruitEdge method failed!");
-                }
-                oop_node_data temp_fruit_src = gg.getNode(temp_fruit_edge.getSrc());
-                oop_node_data closest_fruit_src = gg.getNode(closest_fruit_edge.getSrc());
-                // compare so that closest fruit contains the one with smallest weight
-                if (closest_fruit_src.getWeight() > temp_fruit_src.getWeight()) {
+                if (closest_fruit_edge == null){
                     closest_fruit_edge = temp_fruit_edge;
+                }
+                if ( temp_fruit_edge != null) {
+                    double smallestWeight = gg.getNode(closest_fruit_edge.getSrc()).getWeight();
+                    double newWeight = gg.getNode(temp_fruit_edge.getSrc()).getWeight();
+                    if(smallestWeight > newWeight)
+                        closest_fruit_edge = temp_fruit_edge;
                 }
 
             }
+            if(closest_fruit_edge == null){
+                throw new RuntimeException("Failed to find any fruit!");
+            }
+            //System.out.println("For fruit on edge (" + closest_fruit_edge.getSrc() + ", " + closest_fruit_edge.getDest()+ ")");
             // first add dest, then src, then the other nodes on path
             oop_node_data n = gg.getNode(closest_fruit_edge.getDest());
-            System.out.println("For fruit on edge (" + closest_fruit_edge.getSrc() + ", " + closest_fruit_edge.getDest()+ ")");
             path.add(n);
             // check that robot isn't already on the fruit edge
             if(source!= closest_fruit_edge.getSrc()) {
@@ -65,12 +65,15 @@ public class Robot_Algs {
         }catch(JSONException exc){
             System.out.println(exc);
         }
+        /*
         String pathStr ="path: ";
         for (int i = 0; i < path.size(); i++) {
             pathStr += path.get(i).getKey() + ", ";
         }
         System.out.println(pathStr);
-        return path;
+
+         */
+        return path.get(0);
     }
 
 
@@ -78,7 +81,7 @@ public class Robot_Algs {
         //System.out.println(fruitStr);
         try {
             oop_edge_data e;
-            OOP_Point3D p1, p2, p3;
+            OOP_Point3D p_src, p_dst, p_fruit;
             Iterator<oop_node_data> itr_n;
             Iterator<oop_edge_data> itr_e;
             // get fruit info
@@ -87,8 +90,9 @@ public class Robot_Algs {
             String pos = f.getJSONObject("Fruit").getString("pos");
             int fruitType = f.getJSONObject("Fruit").getInt("type");
             // parse fruit coordinates
-            p3 = parseCoordinate(pos);
+            p_fruit = parseCoordinate(pos);
             // go ever all edges and use the triangle equation to determine whether fruit is on any one
+
             itr_n = graph.getV().iterator();
             while (itr_n.hasNext()) {
                 // iterator over edges belonging to node
@@ -96,19 +100,24 @@ public class Robot_Algs {
                 itr_e = graph.getE(n.getKey()).iterator();
                 while (itr_e.hasNext()) {
                     e = itr_e.next();
-                    p1 = graph.getNode(e.getSrc()).getLocation();
-                    p2 = graph.getNode(e.getDest()).getLocation();
-                    // check is on edge, ignore direction
-                    if(Math.abs(p1.distance3D(p2) - (p1.distance3D(p3) + p2.distance3D(p3))) < 0.001) {
+                    p_src = graph.getNode(e.getSrc()).getLocation();
+                    p_dst = graph.getNode(e.getDest()).getLocation();
+                    // delta must be positive and very small by the triangle equation
+                    double eps = 0.0000001;
+                    double delta = Math.abs(p_src.distance3D(p_fruit) + p_dst.distance3D(p_fruit) - p_src.distance3D(p_dst));
+                    if (delta < eps) {
                         //check direction
-                        if(fruitType == e.getDest() - e.getSrc()){
+                        if (fruitType < 0 &&  e.getDest() - e.getSrc() < 0) {
                             return e;
                         }
+                        if (fruitType > 0 &&  e.getDest() - e.getSrc() > 0) {
+                            return e;
+                        }
+
                     }
 
                 }
             }
-
         }
         catch(JSONException exc){
             System.out.println(exc);
@@ -119,7 +128,8 @@ public class Robot_Algs {
 
     public static OOP_Point3D parseCoordinate(String c){
         String[] xAndY = c.split(",");
-        return new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
+        OOP_Point3D p = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
+        return p;
     }
 
     // go over all robots, see whether any one is close to p, return robot id if so
