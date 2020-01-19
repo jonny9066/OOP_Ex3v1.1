@@ -179,8 +179,9 @@ public class MyGameGUI {
                         oop_node_data nn = Robot_Algs.nextNode(robots_json.get(i), game.getFruits(), game.getGraph());
                         long move = game.chooseNextEdge(id, nn.getKey());
                         // check that robot moved
-                        if(move != -1)
-                            System.out.println("Next node for " + id + " is " + nn.getKey());
+                        if(move != -1) {
+                            //System.out.println("Next node for " + id + " is " + nn.getKey());
+                        }
                         else
                             System.out.println("Robot " +id + " tries to go to node "
                                     + nn.getKey() + ", but can't!");
@@ -196,6 +197,22 @@ public class MyGameGUI {
             StdDraw.show();
             StdDraw.pause(20);
         }
+        //log results
+        int totalScore = 0;
+        List<String> robots_json = game.getRobots();
+        // go over robots
+        for (int i = 0; i < robots_json.size(); i++) {
+            try {
+                // get robot info
+                JSONObject r = new JSONObject(robots_json.get(i));
+                int score = r.getJSONObject("Robot").getInt("value");
+                totalScore+= score;
+            } catch (JSONException jsonException) {
+                System.out.println(jsonException);
+            }
+        }
+        System.out.println("Final score is: " + totalScore);
+
     }
 
 
@@ -279,8 +296,9 @@ public class MyGameGUI {
                                             "Options: " + adj));
                                     // check that chosen node is valid
                                     long i = game.chooseNextEdge(id, choice);
-                                    if (i != -1)
-                                        System.out.println("Robot " + id + " moves  to " + choice);
+                                    if (i != -1) {
+                                        //System.out.println("Robot " + id + " moves  to " + choice);
+                                    }
                                     else
                                         System.out.println("Robot cannot move to " + choice);
 
