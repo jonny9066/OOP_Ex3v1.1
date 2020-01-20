@@ -120,6 +120,9 @@ public class KML_Logger {
             }
         }
     }
+    public String getKML(){
+        return kml.toString();
+    }
 
 
 
