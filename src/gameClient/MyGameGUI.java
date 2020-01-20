@@ -22,8 +22,8 @@ public class MyGameGUI {
      * @param args
      */
     public static void main(String[] args){
-        //MyGameGUI mg = new MyGameGUI();
-        //mg.startAuto();
+        MyGameGUI mg = new MyGameGUI(0);
+        mg.start();
     }
     // initialize game
     private MyGameGUI(int level) {
@@ -62,7 +62,8 @@ public class MyGameGUI {
         StdDraw.setYscale(yMin, yMax);
 
         addRobots();
-        int score = play();
+        int[] scoreMoves = play();
+        System.out.println("Score is: " + scoreMoves[0] + "\nNumber of moves is: " + scoreMoves[1] );
 
         // get kml string
         String kml_str = kml_log.getKML();
@@ -106,7 +107,8 @@ public class MyGameGUI {
     }
     //Go over robots, for every robot that is not moving get next move using function
     // returns score
-    private int play(){
+    private int[] play(){
+        int moves = 0;
         while (game.isRunning()) {
             List<String> log = game.move();
             // get robots from game
@@ -126,6 +128,7 @@ public class MyGameGUI {
                         long move = game.chooseNextEdge(id, nn.getKey());
                         // check that robot moved
                         if(move != -1) {
+                            moves ++;
                             //System.out.println("Next node for " + id + " is " + nn.getKey());
                         }
                         else
@@ -157,8 +160,9 @@ public class MyGameGUI {
                 System.out.println(jsonException);
             }
         }
-        System.out.println("Final score is " + totalScore);
-        return totalScore;
+        //System.out.println("Final score is " + totalScore);
+        int[] scoreMoves = {totalScore, moves};
+        return scoreMoves;
 
     }
 
