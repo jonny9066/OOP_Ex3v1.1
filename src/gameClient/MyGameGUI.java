@@ -26,22 +26,8 @@ public class MyGameGUI {
         mg.startAuto();
     }
     // initialize game
-    public MyGameGUI() {
+    private void MyGameGUI(int level) {
         // get level from user
-        int level = -1;
-        while(level > 23 || level < 0) {
-            try {
-                JFrame f = new JFrame("Input");
-                level = Integer.parseInt(JOptionPane.showInputDialog(f,
-                        "Choose level: 0-23"));
-
-            } catch (Exception exception) {
-                System.out.println(exception);
-                JFrame f = new JFrame();
-                JOptionPane.showMessageDialog(f, "Bad input, please try again.",
-                        "Alert", JOptionPane.WARNING_MESSAGE);
-            }
-        }
         game = Game_Server.getServer(level);
         // initialize game graph from server
         String g = game.getGraph();
@@ -92,6 +78,35 @@ public class MyGameGUI {
         textPos = new OOP_Point3D((xMax+xMin)/2, yMax - 2*eps);
 
     }
+    private void initializeWithChoice(){
+        int level = -1;
+        while(level > 23 || level < 0) {
+            try {
+                JFrame f = new JFrame("Input");
+                level = Integer.parseInt(JOptionPane.showInputDialog(f,
+                        "Choose level: 0-23"));
+
+            } catch (Exception exception) {
+                System.out.println(exception);
+                JFrame f = new JFrame();
+                JOptionPane.showMessageDialog(f, "Bad input, please try again.",
+                        "Alert", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+        MyGameGUI(level);
+    }
+    // run levels 0, 1, 3, ..., 23, compare scores and save to DB
+    private void runCompetitionLevels(){
+        // int[x][y], x is for case, y is for {stage, grade and moves}
+        int[][] passTable = {{0, 145, 290}, {1, 450, 580}, {3, 720, 580}, {5, 570, 500}, {9, 510, 580},
+                {11, 1050, 580}, {13, 310, 580}, {16, 235, 290}, {19, 250, 580}, {20, 200, 290}, {23, 1000, 1140}};
+        for (int i = 0; i <passTable.length ; i++) {
+            MyGameGUI(passTable[i][0]);
+        }
+    }
+
+
+
     public void startAuto(){
         start(true);
     }
@@ -119,7 +134,6 @@ public class MyGameGUI {
         }catch (FileNotFoundException exc){
             System.out.println(exc);
         }
-
 
     }
 
@@ -193,7 +207,7 @@ public class MyGameGUI {
             }
             // draw
             StdDraw.clear();
-            draw(gg, game, log, eps, kml_log, textPos);
+            painterAndLogger.drawAndLog(gg, game, log, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -232,7 +246,7 @@ public class MyGameGUI {
                 if (p1.close2equals(p2)) {
                     StdDraw.point(p1.x(), p1.y());
                     // check node was clicked
-                    int key = closeToNode(gg, p1, eps);
+                    int key = Robot_Algs.closeToNode(gg, p1, eps);
                     if (key != -1) {
                         game.addRobot(key);
                         game.startGame();
@@ -242,7 +256,7 @@ public class MyGameGUI {
             }
 
             StdDraw.clear();
-            draw(gg, game, null, eps, kml_log, textPos);
+            painterAndLogger.drawAndLog(gg, game, null, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -323,7 +337,7 @@ public class MyGameGUI {
 
             // draw
             StdDraw.clear();
-            draw(gg, game, log, eps, kml_log, textPos);
+            painterAndLogger.drawAndLog(gg, game, log, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -331,130 +345,11 @@ public class MyGameGUI {
 
 
 
-    private static int closeToNode(OOP_DGraph g, OOP_Point3D p, double eps){
-        Iterator<oop_node_data> itr = g.getV().iterator();
-        while(itr.hasNext()){
-            oop_node_data n = itr.next();
-            if(p.distance3D(n.getLocation()) < eps) {
-                return n.getKey();
-            }
-        }
-        return -1;
-    }
 
 
 
-    private static void draw(OOP_DGraph gg, game_service game, List<String> robots_json, double eps,
-                             KML_Logger kml_log, OOP_Point3D topMid) {
-        Iterator<oop_node_data> itr1;
-        Iterator<oop_edge_data> itr2;
-        oop_node_data n;
-        oop_edge_data e;
-        OOP_Point3D p1, p2, p3;
-        // Draw nodes
-        itr1 = gg.getV().iterator();
-        while (itr1.hasNext()) {
-            StdDraw.setPenColor(StdDraw.BLUE);
-            StdDraw.setPenRadius(0.02);
-            n = itr1.next();
-            p1 = n.getLocation();
-            // Actually draw
-            StdDraw.point(p1.x(), p1.y());
-            // Annotate
-            StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
-            StdDraw.text(p1.x(), p1.y() + eps*0.5, "" + n.getKey());
-        }
-        // draw edges
-        itr1 = gg.getV().iterator();
-        while (itr1.hasNext()) {
-            n = itr1.next();
-            itr2 = gg.getE(n.getKey()).iterator();
-            while (itr2.hasNext()) {
-                e = itr2.next();
-                p1 = gg.getNode(e.getSrc()).getLocation();
-                p2 = gg.getNode(e.getDest()).getLocation();
-                // Actually draw
-                StdDraw.setPenColor(StdDraw.BLACK);
-                StdDraw.setPenRadius(0.0025);
-                StdDraw.line(p1.x(), p1.y(), p2.x(), p2.y());
-                // draw directional dots
-                StdDraw.setPenColor(StdDraw.YELLOW);
-                StdDraw.setPenRadius(0.01);
-                p3 = new OOP_Point3D(0.25 * p1.x() + 0.75 * p2.x(), 0.25 * p1.y() + 0.75 * p2.y());
-                StdDraw.point(p3.x(), p3.y());
 
 
-
-            }
-        }
-        // draw fruit and log in kml
-        java.util.List<String> fruit = game.getFruits();
-        for (int i = 0; i < fruit.size(); i++) {
-            try {
-                JSONObject f = new JSONObject(fruit.get(i));
-                String pos = f.getJSONObject("Fruit").getString("pos");
-                int type = f.getJSONObject("Fruit").getInt("type");
-                String[] xAndY = pos.split(",");
-                p1 = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
-                // type is dest - src of fruit's edge, if negative then src > dest and we mark it banana
-                if(type < 0){
-                    StdDraw.picture(p1.x(), p1.y(), "banana.png", 0.0004, 0.0003);
-                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Banana");
-                }
-                else {
-                    StdDraw.picture(p1.x(), p1.y(), "apple.png", 0.0004, 0.0004);
-                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Apple");
-                }
-
-            } catch (JSONException jsonException) {
-                System.out.println(jsonException);
-            }
-
-        }
-        // draw robots and log in kml
-        if(robots_json != null) {
-            StdDraw.setPenColor(StdDraw.BLACK);
-            StdDraw.text(topMid.x(), topMid.y() , "Scores:");
-            for (int i = 0; i < robots_json.size(); i++) {
-                try {
-                    JSONObject r = new JSONObject(robots_json.get(i));
-                    String pos = r.getJSONObject("Robot").getString("pos");
-                    int score = r.getJSONObject("Robot").getInt("value");
-                    int id = r.getJSONObject("Robot").getInt("id");
-                    String[] xAndY = pos.split(",");
-                    p1 = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
-                    StdDraw.setPenColor(intToColor(i));
-                    StdDraw.setPenRadius(0.004);
-                    StdDraw.circle(p1.x(), p1.y(), 0.00015);
-                    // draw score for robot
-                    StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
-                    StdDraw.text(topMid.x(), topMid.y() - eps*(id+1), "Robot "+id+": "+score+" points");
-                    // log
-                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Robot "+ String.valueOf(id));
-
-                } catch (JSONException jsonException) {
-                    System.out.println(jsonException);
-                }
-
-            }
-        }
-        StdDraw.setPenColor(StdDraw.BLACK);
-        StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
-        StdDraw.text(topMid.x(), topMid.y() + eps, String.valueOf(game.timeToEnd()));
-
-    }
-    private static Color intToColor(int i){
-        int cn = i%8;
-        if(i == 0){return StdDraw.CYAN; }
-        if(i == 1){return StdDraw.GREEN; }
-        if(i == 2){return StdDraw.MAGENTA; }
-        if(i == 3){return StdDraw.ORANGE; }
-        if(i == 4){return StdDraw.PINK; }
-        if(i == 5){return StdDraw.BOOK_BLUE; }
-        if(i == 6){return StdDraw.BOOK_LIGHT_BLUE; }
-        if(i == 7){return StdDraw.BOOK_RED; }
-        else {return StdDraw.PRINCETON_ORANGE; }
-    }
 
     private double xMax;
     private double xMin;

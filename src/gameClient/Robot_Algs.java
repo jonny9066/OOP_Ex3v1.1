@@ -218,4 +218,15 @@ public class Robot_Algs {
         q.remove(min);
         return min;
     }
+
+    public static int closeToNode(OOP_DGraph g, OOP_Point3D p, double eps){
+        Iterator<oop_node_data> itr = g.getV().iterator();
+        while(itr.hasNext()){
+            oop_node_data n = itr.next();
+            if(p.distance3D(n.getLocation()) < eps) {
+                return n.getKey();
+            }
+        }
+        return -1;
+    }
 }
