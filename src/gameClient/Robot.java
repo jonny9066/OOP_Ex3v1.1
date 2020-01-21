@@ -18,6 +18,7 @@ public class Robot {
             return null;
         }
         else{
+            // get and remove next node
             oop_node_data nextNode = path.get(0);
             path.remove(path.get(0));
             // if we got to the fruit, remove it from target

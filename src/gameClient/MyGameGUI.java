@@ -22,12 +22,12 @@ public class MyGameGUI {
      * @param args
      */
     public static void main(String[] args){
-        MyGameGUI mg = new MyGameGUI(0);
+        MyGameGUI mg = new MyGameGUI(23);
         mg.playGame();
+        //runCompetitionLevels();
     }
     // initialize game
     private MyGameGUI(int level) {
-        int id = 208551374;
         Game_Server.login(id);
         game = Game_Server.getServer(level);
         // initialize game graph from server
@@ -41,13 +41,34 @@ public class MyGameGUI {
     }
 
     // run levels 0, 1, 3, ..., 23, compare scores and save to DB
-    private void runCompetitionLevels(){
+    private static void runCompetitionLevels(){
         // int[x][y], x is for case, y is for {stage, grade and moves}
         int[][] passTable = {{0, 145, 290}, {1, 450, 580}, {3, 720, 580}, {5, 570, 500}, {9, 510, 580},
                 {11, 1050, 580}, {13, 310, 580}, {16, 235, 290}, {19, 250, 580}, {20, 200, 290}, {23, 1000, 1140}};
-        for (int i = 0; i <passTable.length ; i++) {
-            MyGameGUI gameGUI = new MyGameGUI(passTable[i][0]);
+        // i is current level, j is next level from the table to be passed
+        int j = 0, i = 0;
+        while(i < 24) {
+            MyGameGUI gameGUI = new MyGameGUI(i);
             gameGUI.playGame();
+            // check whether level needs to be passed
+            if(i == passTable[j][0]){
+                int[] scoreMoves = gameGUI.getScoreMoves();
+                // check if we passed
+                if(scoreMoves[0] > passTable[j][1] && scoreMoves[1] > passTable[j][2]){
+                    j++;
+                }
+                else{
+                    System.out.println("You failed level: " + i + "\n Your score: " +scoreMoves[0]
+                    +"\nRequired score: " + passTable[j][1] +"\nYour number of moves: "+ scoreMoves[1] +
+                            "\nRequired number of moves: " + passTable[j][2]);
+                    break;
+                }
+            }
+            i++;
+
+        }
+        if(i == 24){
+            System.out.println("You passed all levels!!!");
         }
     }
 
@@ -57,8 +78,7 @@ public class MyGameGUI {
     // when a robot is not moving find it a next node
     // save kml, score and moves
     public void playGame() {
-        int moves = 0;
-
+        // add robots
         while(!game.isRunning()) {
             List<String> fruit = game.getFruits();
             Iterator<String> itr = fruit.iterator();
@@ -70,9 +90,11 @@ public class MyGameGUI {
                 }
             }
         }
-        System.out.println("Starting game!\nPlaying...");
         // initialize Robot objects
         initializeRobots(game.getRobots());
+
+        System.out.println("Starting game!\nPlaying...");
+        // playing
         while (game.isRunning()) {
             List<String> log = game.move();
             // get robots from game
@@ -92,13 +114,12 @@ public class MyGameGUI {
                         oop_node_data nn = rObj.getNextNode();//Robot_Algs.nextNode(robots_json.get(i), game.getFruits(), game.getGraph());
                         if(nn != null){
                             game.chooseNextEdge(id, nn.getKey());
-                            moves ++;
                         }
                         // if there's no next node on path, the fruit must've been reached
                         // so we get it a new path to an *available* fruit
                         else{
                             List<String> availableFruits = game.getFruits();
-                            System.out.println(availableFruits);
+                            //System.out.println(availableFruits);
                             // get an iterator over Robots
                             Collection<Robot> robotsList = robots.values();
                             Iterator<Robot> itr = robotsList.iterator();
@@ -125,22 +146,21 @@ public class MyGameGUI {
             StdDraw.show();
             StdDraw.pause(20);
         }
-        //get score
-        int totalScore = 0;
-        List<String> robots_json = game.getRobots();
-        // go over robots
-        for (int i = 0; i < robots_json.size(); i++) {
-            try {
-                // get robot info
-                JSONObject r = new JSONObject(robots_json.get(i));
-                int score = r.getJSONObject("Robot").getInt("value");
-                totalScore+= score;
-            } catch (JSONException jsonException) {
-                System.out.println(jsonException);
-            }
+        // send kml
+        game.sendKML(kml_log.getKML());
+        //get score and moves
+        int grade = -1;
+        int moves = -1;
+        try {
+            JSONObject results = new JSONObject(game.toString());
+            moves = results.getJSONObject("GameServer").getInt("moves");
+            grade = results.getJSONObject("GameServer").getInt("grade");
+
+        }catch(Exception e){
+            System.out.println(e);
         }
         score_moves = new int[2];
-        score_moves[0] = totalScore;
+        score_moves[0] = grade;
         score_moves[1] = moves;
 
 
@@ -340,6 +360,7 @@ public class MyGameGUI {
     private KML_Logger kml_log;
     private int[] score_moves;
     HashMap<Integer, Robot> robots;
+    private final int id = 208551374;
 
     // hundredth of x length
     private double eps;
