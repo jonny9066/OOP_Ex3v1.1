@@ -23,7 +23,7 @@ public class MyGameGUI {
      */
     public static void main(String[] args){
         MyGameGUI mg = new MyGameGUI(0);
-        mg.start();
+        mg.playGame();
     }
     // initialize game
     private MyGameGUI(int level) {
@@ -47,68 +47,32 @@ public class MyGameGUI {
                 {11, 1050, 580}, {13, 310, 580}, {16, 235, 290}, {19, 250, 580}, {20, 200, 290}, {23, 1000, 1140}};
         for (int i = 0; i <passTable.length ; i++) {
             MyGameGUI gameGUI = new MyGameGUI(passTable[i][0]);
-
+            gameGUI.playGame();
         }
     }
 
 
 
+    // place robots
+    // when a robot is not moving find it a next node
+    // save kml, score and moves
+    public void playGame() {
+        int moves = 0;
 
-    private void start() {
-        // enable to draw off screen
-        StdDraw.enableDoubleBuffering();
-        StdDraw.setCanvasSize((int)(500 * XYRatio), 500);
-        StdDraw.setXscale(xMin, xMax);
-        StdDraw.setYscale(yMin, yMax);
-
-        addRobots();
-        int[] scoreMoves = play();
-        System.out.println("Score is: " + scoreMoves[0] + "\nNumber of moves is: " + scoreMoves[1] );
-
-        // get kml string
-        String kml_str = kml_log.getKML();
-
-    }
-
-
-    // add robots close to fruit
-    private void addRobots(){
         while(!game.isRunning()) {
             List<String> fruit = game.getFruits();
             Iterator<String> itr = fruit.iterator();
             while (itr.hasNext()) {
                 oop_edge_data e = Robot_Algs.findFruitEdge(itr.next(), gg);
                 if (e != null) {
-                    boolean added = game.addRobot(e.getSrc());
+                    game.addRobot(e.getSrc());
                     game.startGame();
-                    if (added) {
-                        System.out.println("Robot added on node " + e.getSrc());
-                    } else
-                        break;
                 }
-
             }
         }
-
-        // in case there are no fruit we add the robots manually
-        while(!game.isRunning()){
-            for (int i = 0; i < gg.getV().size(); i++) {
-                boolean added = game.addRobot(i);
-                game.startGame();
-                if (added) {
-                    System.out.println("Robot added on node " + i);
-                } else
-                    break;
-            }
-        }
-
-        System.out.println("Added all robots.");
-
-    }
-    //Go over robots, for every robot that is not moving get next move using function
-    // returns score
-    private int[] play(){
-        int moves = 0;
+        System.out.println("Starting game!\nPlaying...");
+        // initialize Robot objects
+        initializeRobots(game.getRobots());
         while (game.isRunning()) {
             List<String> log = game.move();
             // get robots from game
@@ -122,18 +86,33 @@ public class MyGameGUI {
                     int dest = r.getJSONObject("Robot").getInt("dest");
                     // check that robot is not moving
                     if(dest == -1){
-                        // get path for this robot
-                        // move
-                        oop_node_data nn = Robot_Algs.nextNode(robots_json.get(i), game.getFruits(), game.getGraph());
-                        long move = game.chooseNextEdge(id, nn.getKey());
-                        // check that robot moved
-                        if(move != -1) {
+                        // get corresponding robot object
+                        Robot rObj = robots.get(id);
+                        // try to get the next fruit on its path
+                        oop_node_data nn = rObj.getNextNode();//Robot_Algs.nextNode(robots_json.get(i), game.getFruits(), game.getGraph());
+                        if(nn != null){
+                            game.chooseNextEdge(id, nn.getKey());
                             moves ++;
-                            //System.out.println("Next node for " + id + " is " + nn.getKey());
                         }
-                        else
-                            System.out.println("Robot " +id + " tries to go to node "
-                                    + nn.getKey() + ", but can't!");
+                        // if there's no next node on path, the fruit must've been reached
+                        // so we get it a new path to an *available* fruit
+                        else{
+                            List<String> availableFruits = game.getFruits();
+                            System.out.println(availableFruits);
+                            // get an iterator over Robots
+                            Collection<Robot> robotsList = robots.values();
+                            Iterator<Robot> itr = robotsList.iterator();
+                            // remove all the fruits that are chased by other robots from the list of available fruits
+                            while (itr.hasNext()){
+                                availableFruits.remove(itr.next().getTargetFruitJSON());
+                            }
+                            // set Robot a new path
+                            PathAndTarget pt = Robot_Algs.pathToClosestFruit(robots_json.get(i),
+                                    availableFruits, game.getGraph());
+                            rObj.setPath(pt.getPath());
+                            rObj.setTargetFruitJSON(pt.getTarget());
+                            // no need to move, will move next time
+                        }
                     }
 
                 } catch (JSONException jsonException) {
@@ -142,7 +121,7 @@ public class MyGameGUI {
             }
             // draw
             StdDraw.clear();
-            painterAndLogger.drawAndLog(gg, game, log, eps, kml_log, textPos);
+            drawAndLog(gg, game, log, eps, kml_log, textPos);
             StdDraw.show();
             StdDraw.pause(20);
         }
@@ -160,14 +139,135 @@ public class MyGameGUI {
                 System.out.println(jsonException);
             }
         }
-        //System.out.println("Final score is " + totalScore);
-        int[] scoreMoves = {totalScore, moves};
-        return scoreMoves;
+        score_moves = new int[2];
+        score_moves[0] = totalScore;
+        score_moves[1] = moves;
 
+
+
+        System.out.println("Game over!\nScore is: " + score_moves[0] + "\nNumber of moves is: " + score_moves[1] );
+    }
+
+
+
+    public static void drawAndLog(OOP_DGraph gg, game_service game, List<String> robots_json, double eps,
+                                  KML_Logger kml_log, OOP_Point3D topMid) {
+        Iterator<oop_node_data> itr1;
+        Iterator<oop_edge_data> itr2;
+        oop_node_data n;
+        oop_edge_data e;
+        OOP_Point3D p1, p2, p3;
+        // Draw nodes
+        itr1 = gg.getV().iterator();
+        while (itr1.hasNext()) {
+            StdDraw.setPenColor(StdDraw.BLUE);
+            StdDraw.setPenRadius(0.02);
+            n = itr1.next();
+            p1 = n.getLocation();
+            // Actually draw
+            StdDraw.point(p1.x(), p1.y());
+            // Annotate
+            StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
+            StdDraw.text(p1.x(), p1.y() + eps*0.5, "" + n.getKey());
+        }
+        // draw edges
+        itr1 = gg.getV().iterator();
+        while (itr1.hasNext()) {
+            n = itr1.next();
+            itr2 = gg.getE(n.getKey()).iterator();
+            while (itr2.hasNext()) {
+                e = itr2.next();
+                p1 = gg.getNode(e.getSrc()).getLocation();
+                p2 = gg.getNode(e.getDest()).getLocation();
+                // Actually draw
+                StdDraw.setPenColor(StdDraw.BLACK);
+                StdDraw.setPenRadius(0.0025);
+                StdDraw.line(p1.x(), p1.y(), p2.x(), p2.y());
+                // draw directional dots
+                StdDraw.setPenColor(StdDraw.YELLOW);
+                StdDraw.setPenRadius(0.01);
+                p3 = new OOP_Point3D(0.25 * p1.x() + 0.75 * p2.x(), 0.25 * p1.y() + 0.75 * p2.y());
+                StdDraw.point(p3.x(), p3.y());
+
+
+
+            }
+        }
+        // draw fruit and log in kml
+        java.util.List<String> fruit = game.getFruits();
+        for (int i = 0; i < fruit.size(); i++) {
+            try {
+                JSONObject f = new JSONObject(fruit.get(i));
+                String pos = f.getJSONObject("Fruit").getString("pos");
+                int type = f.getJSONObject("Fruit").getInt("type");
+                String[] xAndY = pos.split(",");
+                p1 = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
+                // type is dest - src of fruit's edge, if negative then src > dest and we mark it banana
+                if(type < 0){
+                    StdDraw.picture(p1.x(), p1.y(), "banana.png", 0.0004, 0.0003);
+                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Banana");
+                }
+                else {
+                    StdDraw.picture(p1.x(), p1.y(), "apple.png", 0.0004, 0.0004);
+                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Apple");
+                }
+
+            } catch (JSONException jsonException) {
+                System.out.println(jsonException);
+            }
+
+        }
+        // draw robots and log in kml
+        if(robots_json != null) {
+            StdDraw.setPenColor(StdDraw.BLACK);
+            StdDraw.text(topMid.x(), topMid.y() , "Scores:");
+            for (int i = 0; i < robots_json.size(); i++) {
+                try {
+                    JSONObject r = new JSONObject(robots_json.get(i));
+                    String pos = r.getJSONObject("Robot").getString("pos");
+                    int score = r.getJSONObject("Robot").getInt("value");
+                    int id = r.getJSONObject("Robot").getInt("id");
+                    String[] xAndY = pos.split(",");
+                    p1 = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
+                    StdDraw.setPenColor(intToColor(i));
+                    StdDraw.setPenRadius(0.004);
+                    StdDraw.circle(p1.x(), p1.y(), 0.00015);
+                    // draw score for robot
+                    StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
+                    StdDraw.text(topMid.x(), topMid.y() - eps*(id+1), "Robot "+id+": "+score+" points");
+                    // log
+                    kml_log.addMovingPlacemark(p1.x(), p1.y(), "Robot "+ String.valueOf(id));
+
+                } catch (JSONException jsonException) {
+                    System.out.println(jsonException);
+                }
+
+            }
+        }
+        StdDraw.setPenColor(StdDraw.BLACK);
+        StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
+        StdDraw.text(topMid.x(), topMid.y() + eps, String.valueOf(game.timeToEnd()));
+
+    }
+    private static Color intToColor(int i){
+        int cn = i%8;
+        if(i == 0){return StdDraw.CYAN; }
+        if(i == 1){return StdDraw.GREEN; }
+        if(i == 2){return StdDraw.MAGENTA; }
+        if(i == 3){return StdDraw.ORANGE; }
+        if(i == 4){return StdDraw.PINK; }
+        if(i == 5){return StdDraw.BOOK_BLUE; }
+        if(i == 6){return StdDraw.BOOK_LIGHT_BLUE; }
+        if(i == 7){return StdDraw.BOOK_RED; }
+        else {return StdDraw.PRINCETON_ORANGE; }
     }
 
     // gets coordinate range, adds margin, sets position of text and defines epsilon
     private void setWindowParams(){
+        double xMax = 0;
+        double xMin = 0;
+        double yMax = 0;
+        double yMin = 0;
         Iterator<oop_node_data> itr = gg.getV().iterator();
         OOP_Point3D l;
         if(itr.hasNext()){
@@ -205,22 +305,42 @@ public class MyGameGUI {
         xLen = xMax - xMin;
         yLen = yMax - yMin;
         // set useful parameters
-        XYRatio = xLen/yLen;
+        double XYRatio = xLen/yLen;
         eps = xLen*0.01;
         textPos = new OOP_Point3D((xMax+xMin)/2, yMax - 2*eps);
+        // set parameters in StdDraw
+        StdDraw.enableDoubleBuffering();
+        StdDraw.setCanvasSize((int)(500 * XYRatio), 500);
+        StdDraw.setXscale(xMin, xMax);
+        StdDraw.setYscale(yMin, yMax);
+    }
+    public String getKML(){
+        return kml_log.getKML();
+    }
+    public  int[] getScoreMoves(){
+        return score_moves;
+    }
+    private void initializeRobots(List<String> robots_json){
+        robots = new HashMap<>();
+        for (int i = 0; i < robots_json.size(); i++) {
+            try {
+                // get robot info
+                JSONObject r = new JSONObject(robots_json.get(i));
+                int id = r.getJSONObject("Robot").getInt("id");
+                robots.put(id, new Robot(id));
+            } catch (JSONException jsonException) {
+                System.out.println(jsonException);
+            }
+        }
     }
 
     // private data
     private OOP_DGraph gg;
     private game_service game;
     private KML_Logger kml_log;
+    private int[] score_moves;
+    HashMap<Integer, Robot> robots;
 
-    private double xMax;
-    private double xMin;
-    private double yMax;
-    private double yMin;
-    // x/y
-    private double XYRatio;
     // hundredth of x length
     private double eps;
     // position for text on screen
