@@ -3,29 +3,30 @@ package gameClient;
 import oop_dataStructure.OOP_DGraph;
 import oop_dataStructure.oop_edge_data;
 import oop_dataStructure.oop_node_data;
-import oop_utils.OOP_Point3D;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.*;
 
 public class Robot_Algs {
-    public static List<oop_node_data> pathToBestFruit(Robot robot, List<Fruit> fruits, OOP_DGraph gg) {
+    public static PathAndFruit pathToBestFruit(Robot robot, List<Fruit> fruits, OOP_DGraph gg) {
+        // remove current robot from the list of all robots
         List<oop_node_data> path = new ArrayList<>();
+        // run Dijkstra from robot's node
         DijkstraAlg(gg, robot.getSrc());
+
         double bestValue = -1;
         Fruit bestFruit = null;
         Iterator<Fruit> itr = fruits.iterator();
         // set first fruit to be the best
         if(itr.hasNext()){
             bestFruit = itr.next();
-            bestValue = calculateValue(gg.getNode(bestFruit.getSrc()).getWeight(), bestFruit.getValue());
+            bestValue = calculateValue(bestFruit, gg.getNode(bestFruit.getSrc()).getWeight());
         }
+
         // go over all fruit to see which has the highest *value
         // we calculate a value that is different from the regular value
         while (itr.hasNext()) {
             Fruit tempFruit = itr.next();
-            double tempValue = calculateValue(gg.getNode(tempFruit.getSrc()).getWeight(), tempFruit.getValue());
+            double tempValue = calculateValue(tempFruit, gg.getNode(tempFruit.getSrc()).getWeight());
             if (tempValue > bestValue) {
                 bestFruit = tempFruit;
                 bestValue = tempValue;
@@ -35,6 +36,7 @@ public class Robot_Algs {
         if (bestFruit == null) {
             throw new RuntimeException("Function got no fruit!");
         }
+
         // first add dest, then src, then the other nodes on path
         oop_node_data n = gg.getNode(bestFruit.getDest());
         path.add(n);
@@ -53,10 +55,10 @@ public class Robot_Algs {
             Collections.reverse(path);
         }
 
-        return path;
+        return new PathAndFruit(path, bestFruit);
     }
-    private static double calculateValue(double value, double weight){
-        return value/weight;
+    private static double calculateValue( Fruit fruit, double weight){
+            return 0.05*fruit.getValue() - weight;
     }
 
 

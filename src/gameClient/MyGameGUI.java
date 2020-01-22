@@ -49,25 +49,27 @@ public class MyGameGUI implements Runnable {
             game.move();
             // update src, dest and pos of robot objects
             updateRobots(game.getRobots());
-            // iterate over robots
-            Collection<Robot> robotsCollection = robots.values();
-            Iterator<Robot> itr = robotsCollection.iterator();
+            // iterate over robots and give each robot that is not moving a next node
+            Collection<Robot> allRobots = robots.values();
+            Iterator<Robot> itr = allRobots.iterator();
             while (itr.hasNext()) {
-                Robot robot = itr.next();
+                Robot robot = itr.next(); // get next robot
+                // check that robot is not moving
                 if(robot.getDest() == -1){
-                    // convert fruits to objects
+                    // convert fruits to objects, this also finds the edges fruit are on
                     List<Fruit> fruits = tools.fruitsFromJsonToObject(game.getFruits(), gg);
-                    // get path to best value fruit
-                    List<oop_node_data> path = Robot_Algs.pathToBestFruit(robot, fruits, gg);
-                    //robot.setPath(path);
-                    game.chooseNextEdge(robot.getId(), path.get(0).getKey());
-                    }
-
+                    // get path to best value fruit and the chosen fruit
+                    PathAndFruit paf = Robot_Algs.pathToBestFruit(robot, fruits, gg);
+                    robot.setPath(paf.getPath());
+                    robot.setTargetFruit(paf.getFruit());
+                    game.chooseNextEdge(robot.getId(), robot.getNextNode());
+                }
             }
             // draw
             StdDraw.clear();
             painter_logger.drawAndLog(game);
             StdDraw.show();
+            // pause thread
             try {
                 Thread.sleep(20);
             }catch (InterruptedException ie){
@@ -137,14 +139,22 @@ public class MyGameGUI implements Runnable {
 
     private void addRobots(){
         boolean canAdd = true;
+        List<Fruit> fruits = tools.fruitsFromJsonToObject(game.getFruits(), gg);
         while(canAdd) {
-            List<String> fruit = game.getFruits();
-            Iterator<String> itr = fruit.iterator();
+            double bestValue = -1;
+            Fruit bestFruit = null;
+            Iterator<Fruit> itr = fruits.iterator();
             while (itr.hasNext()) {
-                oop_edge_data e = tools.findFruitEdge(itr.next(), gg);
-                if (e != null) {
-                    canAdd = game.addRobot(e.getSrc());
+                Fruit fruit = itr.next();
+                if(fruit.getValue() > bestValue){
+                    bestFruit = fruit;
+                    bestValue = fruit.getValue();
                 }
+            }
+            canAdd = game.addRobot(bestFruit.getSrc());
+            fruits.remove(bestFruit);
+            if(fruits.size() == 0){
+                game.addRobot(bestFruit.getSrc());
             }
         }
     }

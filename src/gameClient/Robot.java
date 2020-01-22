@@ -12,7 +12,6 @@ public class Robot {
 
     public Robot(String json_str){
         try {
-            // get robot info
             JSONObject r = new JSONObject(json_str);
             setId(r.getJSONObject("Robot").getInt("id"));
             setSrc(r.getJSONObject("Robot").getInt("src"));
@@ -22,7 +21,6 @@ public class Robot {
         } catch (JSONException jsonException) {
             System.out.println(jsonException);
         }
-        path = new ArrayList<>();
     }
     // update position, src and dest
     public void updateCoordinates(String json_str){
