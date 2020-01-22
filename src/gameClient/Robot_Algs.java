@@ -10,128 +10,53 @@ import org.json.JSONObject;
 import java.util.*;
 
 public class Robot_Algs {
-    public static PathAndTarget pathToClosestFruit(String robot_json, List<String> fruits, String g) {
+    public static List<oop_node_data> pathToBestFruit(Robot robot, List<Fruit> fruits, OOP_DGraph gg) {
         List<oop_node_data> path = new ArrayList<>();
-        String closest_fruit_string = new String();
-        try {
-            // create a new graph to run dijkstra on
-            OOP_DGraph gg = new OOP_DGraph();
-            gg.init(g);
-            // get node robot is on
-            JSONObject r = new JSONObject(robot_json);
-            int source = r.getJSONObject("Robot").getInt("src");
-            //System.out.println(r);
-            // tag graph nodes with Dijkstra's algorithm
-            DijkstraAlg(gg, source);
-            // get edge for first fruit, we assume there is at least 1 fruit
-            //System.out.println(fruits.get(0));
-            oop_edge_data closest_fruit_edge = null;
-            // compare with other fruit edges to get closest fruit
-            for (int i = 0; i < fruits.size(); i++) {
-                oop_edge_data temp_fruit_edge = findFruitEdge(fruits.get(i), gg);
-                if (closest_fruit_edge == null) {
-                    closest_fruit_edge = temp_fruit_edge;
-                    closest_fruit_string = fruits.get(i);
-                }
-                if (temp_fruit_edge != null) {
-                    double smallestWeight = gg.getNode(closest_fruit_edge.getSrc()).getWeight();
-                    double newWeight = gg.getNode(temp_fruit_edge.getSrc()).getWeight();
-                    if (smallestWeight > newWeight)
-                        closest_fruit_edge = temp_fruit_edge;
-                        closest_fruit_string = fruits.get(i);
-                }
+        DijkstraAlg(gg, robot.getSrc());
+        double bestValue = -1;
+        Fruit bestFruit = null;
+        Iterator<Fruit> itr = fruits.iterator();
+        // set first fruit to be the best
+        if(itr.hasNext()){
+            bestFruit = itr.next();
+            bestValue = calculateValue(gg.getNode(bestFruit.getSrc()).getWeight(), bestFruit.getValue());
+        }
+        // go over all fruit to see which has the highest *value
+        // we calculate a value that is different from the regular value
+        while (itr.hasNext()) {
+            Fruit tempFruit = itr.next();
+            double tempValue = calculateValue(gg.getNode(tempFruit.getSrc()).getWeight(), tempFruit.getValue());
+            if (tempValue > bestValue) {
+                bestFruit = tempFruit;
+                bestValue = tempValue;
+            }
+        }
 
-            }
-            if (closest_fruit_edge == null) {
-                throw new RuntimeException("Failed to find any fruit!");
-            }
-            //System.out.println("For fruit on edge (" + closest_fruit_edge.getSrc() + ", " + closest_fruit_edge.getDest()+ ")");
-            // first add dest, then src, then the other nodes on path
-            oop_node_data n = gg.getNode(closest_fruit_edge.getDest());
+        if (bestFruit == null) {
+            throw new RuntimeException("Function got no fruit!");
+        }
+        // first add dest, then src, then the other nodes on path
+        oop_node_data n = gg.getNode(bestFruit.getDest());
+        path.add(n);
+        // check that robot isn't already on the fruit edge
+        if (robot.getSrc() != bestFruit.getSrc()) {
+            n = gg.getNode(bestFruit.getSrc());
             path.add(n);
-            // check that robot isn't already on the fruit edge
-            if (source != closest_fruit_edge.getSrc()) {
-                n = gg.getNode(closest_fruit_edge.getSrc());
+            // Equivalent to: while n has predecessor. Elements are added from destination to source
+            while (n.getTag() != -1) {
+                n = gg.getNode(n.getTag());
                 path.add(n);
-                // Equivalent to: while n has predecessor. Elements are added from destination to source
-                while (n.getTag() != -1) {
-                    n = gg.getNode(n.getTag());
-                    path.add(n);
-                }
-                // remove node robot is on
-                path.remove(path.size() - 1);
-                // reverse the order of S, because we inserted the nodes in reverse order
-                Collections.reverse(path);
             }
-
-
-        } catch (JSONException exc) {
-            System.out.println(exc);
+            // remove node robot is on
+            path.remove(path.size() - 1);
+            // reverse the order of S, because we inserted the nodes in reverse order
+            Collections.reverse(path);
         }
-        /*
-        String pathStr ="path: ";
-        for (int i = 0; i < path.size(); i++) {
-            pathStr += path.get(i).getKey() + ", ";
-        }
-        System.out.println(pathStr);
 
-         */
-        return new PathAndTarget(path, closest_fruit_string);
+        return path;
     }
-
-
-    static public oop_edge_data findFruitEdge(String fruitStr, OOP_DGraph graph) {
-        //System.out.println(fruitStr);
-        try {
-            oop_edge_data e;
-            OOP_Point3D p_src, p_dst, p_fruit;
-            Iterator<oop_node_data> itr_n;
-            Iterator<oop_edge_data> itr_e;
-            // get fruit info
-            JSONObject f = new JSONObject(fruitStr);
-            //System.out.println(f);
-            String pos = f.getJSONObject("Fruit").getString("pos");
-            int fruitType = f.getJSONObject("Fruit").getInt("type");
-            // parse fruit coordinates
-            p_fruit = parseCoordinate(pos);
-            // go ever all edges and use the triangle equation to determine whether fruit is on any one
-
-            itr_n = graph.getV().iterator();
-            while (itr_n.hasNext()) {
-                // iterator over edges belonging to node
-                oop_node_data n = itr_n.next();
-                itr_e = graph.getE(n.getKey()).iterator();
-                while (itr_e.hasNext()) {
-                    e = itr_e.next();
-                    p_src = graph.getNode(e.getSrc()).getLocation();
-                    p_dst = graph.getNode(e.getDest()).getLocation();
-                    // delta must be positive and very small by the triangle equation
-                    double eps = 0.0000001;
-                    double delta = Math.abs(p_src.distance3D(p_fruit) + p_dst.distance3D(p_fruit) - p_src.distance3D(p_dst));
-                    if (delta < eps) {
-                        //check direction
-                        if (fruitType < 0 && e.getDest() - e.getSrc() < 0) {
-                            return e;
-                        }
-                        if (fruitType > 0 && e.getDest() - e.getSrc() > 0) {
-                            return e;
-                        }
-
-                    }
-
-                }
-            }
-        } catch (JSONException exc) {
-            System.out.println(exc);
-        }
-
-        return null;
-    }
-
-    public static OOP_Point3D parseCoordinate(String c) {
-        String[] xAndY = c.split(",");
-        OOP_Point3D p = new OOP_Point3D(Double.parseDouble(xAndY[0]), Double.parseDouble(xAndY[1]));
-        return p;
+    private static double calculateValue(double value, double weight){
+        return value/weight;
     }
 
 
@@ -163,6 +88,7 @@ public class Robot_Algs {
     }
 
     /*
+    ****ALGORITHM TAKEN FROM THE BOOK "INTRODUCTION TO ALGORITHMS" ***
     Initialize single source, add all nodes to queue - Q, remove the minimal node (in the first run it's s),
     relax its adjacent edges and repeat until Q is empty.
      */

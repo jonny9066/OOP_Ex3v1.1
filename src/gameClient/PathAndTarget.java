@@ -8,16 +8,16 @@ import java.util.List;
  * Just a class to store path and target for returning them together
  */
 public class PathAndTarget {
-    public PathAndTarget(List<oop_node_data> path, String target){
+    public PathAndTarget(List<oop_node_data> path, Fruit fruit){
         this.path = path;
-        this.target = target;
+        this.fruit = fruit;
     }
     public List<oop_node_data> getPath(){
         return path;
     }
-    public String getTarget(){
-        return target;
+    public Fruit getTarget(){
+        return fruit;
     }
     private List<oop_node_data> path;
-    private String target;
+    private Fruit fruit;
 }
