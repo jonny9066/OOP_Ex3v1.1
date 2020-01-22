@@ -183,7 +183,15 @@ public class painterAndLogger {
         StdDraw.setXscale(xMin, xMax);
         StdDraw.setYscale(yMin, yMax);
     }
-    public String getKML(){return kml_log.getKML();}
+    public String saveAndGetKML(){
+        String kml_str = null;
+        try{
+            kml_str = kml_log.saveKML();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return kml_str;
+    }
     KML_Logger kml_log;
     OOP_DGraph gg;
     // private data

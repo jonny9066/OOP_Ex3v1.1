@@ -18,15 +18,14 @@ public class MyGameGUI implements Runnable {
      * @param args
      */
     public static void main(String[] args){
-        //MyGameGUI mg = new MyGameGUI(23);
-        //mg.playGame();
         //runCompetitionLevels();
-        Thread game = new Thread(new MyGameGUI(23), "Level 23");
+        Thread game = new Thread(new MyGameGUI(13), "Game");
         game.start();
     }
     // initialize game
     private MyGameGUI(int level) {
-        //Game_Server.login(id);
+        int myID = 208551374;
+        Game_Server.login(myID);
         game = Game_Server.getServer(level);
         // initialize game graph from server
         String g = game.getGraph();
@@ -39,6 +38,7 @@ public class MyGameGUI implements Runnable {
     @Override
     // a thread that is running while the robots are moving
     public void run() {
+        int sleepTime = 85;
         addRobots();
         game.startGame();
         // initialize Robot objects
@@ -71,13 +71,14 @@ public class MyGameGUI implements Runnable {
             StdDraw.show();
             // pause thread
             try {
-                Thread.sleep(20);
+                Thread.sleep(sleepTime);
             }catch (InterruptedException ie){
                 System.out.println("Thread exception!");
             }
         }
         // send kml
-        game.sendKML(painter_logger.getKML());
+        String kml = painter_logger.saveAndGetKML();
+        game.sendKML(kml);
         //get score and moves
         int grade = -1;
         int moves = -1;
@@ -97,7 +98,7 @@ public class MyGameGUI implements Runnable {
         System.out.println("Game over!\nScore is: " + score_moves[0] + "\nNumber of moves is: " + score_moves[1] );
     }
 
-    /*
+
 
     // run levels 0, 1, 3, ..., 23, compare scores and save to DB
     private static void runCompetitionLevels(){
@@ -112,14 +113,24 @@ public class MyGameGUI implements Runnable {
             game.start();
             // check whether level needs to be passed
             if(i == passTable[j][0]){
-                int[] scoreMoves = gameGUI.getScoreMoves();
+                //get score and moves
+                int grade = -1;
+                int moves = -1;
+                try {
+                    JSONObject results = new JSONObject(game.toString());
+                    moves = results.getJSONObject("GameServer").getInt("moves");
+                    grade = results.getJSONObject("GameServer").getInt("grade");
+
+                }catch(Exception e){
+                    System.out.println(e);
+                }
                 // check if we passed
-                if(scoreMoves[0] > passTable[j][1] && scoreMoves[1] < passTable[j][2]){
+                if(grade > passTable[j][1] && moves < passTable[j][2]){
                     j++;
                 }
                 else{
-                    System.out.println("You failed level: " + i + "\n Your score: " +scoreMoves[0]
-                    +"\nRequired score: " + passTable[j][1] +"\nYour number of moves: "+ scoreMoves[1] +
+                    System.out.println("You failed level: " + i + "\n Your score: " +grade
+                    +"\nRequired score: " + passTable[j][1] +"\nYour number of moves: "+ moves +
                             "\nRequired number of moves: " + passTable[j][2]);
                     break;
                 }
@@ -132,7 +143,7 @@ public class MyGameGUI implements Runnable {
         }
     }
 
-     */
+
 
 
 
@@ -152,10 +163,8 @@ public class MyGameGUI implements Runnable {
                 }
             }
             canAdd = game.addRobot(bestFruit.getSrc());
-            fruits.remove(bestFruit);
-            if(fruits.size() == 0){
-                game.addRobot(bestFruit.getSrc());
-            }
+            if(fruits.size() > 1)
+                fruits.remove(bestFruit);
         }
     }
     private void initializeRobots(List<String> robots_json){
@@ -181,6 +190,9 @@ public class MyGameGUI implements Runnable {
         }catch(JSONException e){
             System.out.println(e);
         }
+    }
+    private String getGameInfo(){
+        return game.toString();
     }
 
 
