@@ -19,13 +19,13 @@ public class MyGameGUI implements Runnable {
      */
     public static void main(String[] args){
         //runCompetitionLevels();
-        Thread game = new Thread(new MyGameGUI(13), "Game");
+        Thread game = new Thread(new MyGameGUI(7), "Game");
         game.start();
     }
     // initialize game
     private MyGameGUI(int level) {
         int myID = 208551374;
-        //Game_Server.login(myID);
+        Game_Server.login(myID);
         game = Game_Server.getServer(level);
         // initialize game graph from server
         String g = game.getGraph();

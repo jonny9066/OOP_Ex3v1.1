@@ -20,7 +20,9 @@ public class painterAndLogger {
         this.game = game;
         setWindowParams(this.gg);
         this.kml_log = new KML_Logger(String.valueOf(level), gg);
+        stats = MyDB.getInfo();
     }
+
     public void drawAndLog(){
         Iterator<oop_node_data> itr1;
         Iterator<oop_edge_data> itr2;
@@ -115,9 +117,15 @@ public class painterAndLogger {
 
             }
         }
+        // draw game info and stats from server
         StdDraw.setPenColor(StdDraw.BLACK);
         StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
-        StdDraw.text(textPos.x(), textPos.y() + eps, String.valueOf(game.timeToEnd()/1000));
+        StdDraw.text(textPos.x(), textPos.y() + eps, "Time left: " + String.valueOf(game.timeToEnd()/1000));
+        int m = 0;
+        for (String line : stats.split("\n")) {
+            StdDraw.text(statsPos.x(), statsPos.y() - m* eps, line);
+            m++;
+        }
 
     }
     private static Color intToColor(int i){
@@ -171,14 +179,15 @@ public class painterAndLogger {
         double yMargin = 0.05*yLen;
         xMax = xMax + xMargin;
         xMin = xMin - xMargin;
-        yMax = yMax + yMargin;
+        yMax = yMax + 5* yMargin;
         yMin = yMin - yMargin;
         xLen = xMax - xMin;
         yLen = yMax - yMin;
         // set useful parameters
         double XYRatio = xLen/yLen;
         eps = xLen*0.01;
-        textPos = new OOP_Point3D((xMax+xMin)/2, yMax - 2*eps);
+        textPos = new OOP_Point3D((xMax+xMin)/2 - 10* eps, yMax - 2*eps);
+        statsPos = new OOP_Point3D((xMax+xMin)/2 + 10* eps, yMax - 2*eps);
         // set parameters in StdDraw
         StdDraw.enableDoubleBuffering();
         StdDraw.setCanvasSize((int)(500 * XYRatio), 500);
@@ -202,4 +211,6 @@ public class painterAndLogger {
     private double eps;
     // position for text on screen
     private OOP_Point3D textPos;
+    private OOP_Point3D statsPos;
+    private String stats;
 }
