@@ -3,4 +3,4 @@
 This is the 4-th assignment in the OOP course.
 It features automated robots that collect fruit for a high score.
 It is now possible to log in to a database and upload the results to a server.
-GUI now displays the scores and info about the game.
+GUI now displays the scores and info about the game. It may look similar to the previous release, however, much of the code has been rewritten.
