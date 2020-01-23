@@ -25,14 +25,14 @@ public class MyGameGUI implements Runnable {
     // initialize game
     private MyGameGUI(int level) {
         int myID = 208551374;
-        Game_Server.login(myID);
+        //Game_Server.login(myID);
         game = Game_Server.getServer(level);
         // initialize game graph from server
         String g = game.getGraph();
         gg = new OOP_DGraph();
         gg.init(g);
         // initialize a class that draws game and logs in KML
-        painter_logger = new painterAndLogger(gg, level);
+        painter_logger = new painterAndLogger(gg, level, game);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class MyGameGUI implements Runnable {
             }
             // draw
             StdDraw.clear();
-            painter_logger.drawAndLog(game);
+            painter_logger.drawAndLog();
             StdDraw.show();
             // pause thread
             try {

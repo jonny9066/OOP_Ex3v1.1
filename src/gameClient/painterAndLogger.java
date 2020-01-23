@@ -1,5 +1,6 @@
 package gameClient;
 
+import Server.Game_Server;
 import Server.game_service;
 import oop_dataStructure.OOP_DGraph;
 import oop_dataStructure.oop_edge_data;
@@ -14,12 +15,13 @@ import java.util.Iterator;
 import java.util.List;
 
 public class painterAndLogger {
-    public painterAndLogger(OOP_DGraph gg, int level){
+    public painterAndLogger(OOP_DGraph gg, int level, game_service game){
         this.gg = gg;
+        this.game = game;
         setWindowParams(this.gg);
         this.kml_log = new KML_Logger(String.valueOf(level), gg);
     }
-    public void drawAndLog(game_service game){
+    public void drawAndLog(){
         Iterator<oop_node_data> itr1;
         Iterator<oop_edge_data> itr2;
         oop_node_data n;
@@ -194,6 +196,7 @@ public class painterAndLogger {
     }
     KML_Logger kml_log;
     OOP_DGraph gg;
+    game_service game;
     // private data
     // hundredth of x length
     private double eps;
