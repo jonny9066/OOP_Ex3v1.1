@@ -49,7 +49,7 @@ public class MyDB {
                 int score = resultSet.getInt("score");
                 int moves = resultSet.getInt("moves");
                 if(passMoves[level] >= moves) {
-                    if (passScore[level] > moves) {
+                    if (passScore[level] < score) {
                         // check if this score is higher than what we have
                         if (bestResults[level] < score) {
                             bestResults[level] = score;

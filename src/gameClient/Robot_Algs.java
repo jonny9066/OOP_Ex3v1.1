@@ -7,9 +7,15 @@ import oop_dataStructure.oop_node_data;
 import java.util.*;
 
 public class Robot_Algs {
-    public static PathAndFruit pathToBestFruit(Robot robot, List<Fruit> fruits, OOP_DGraph gg) {
-        // remove current robot from the list of all robots
+    public static PathAndFruit pathToBestFruit(Robot robot, List<Fruit> fruits,
+                                               List<Fruit> forbiddenFruits, OOP_DGraph gg) {
         List<oop_node_data> path = new ArrayList<>();
+        //remove forbidden fruits from list of available fruits
+        for(Fruit fruit : forbiddenFruits) {
+            if (fruits.size() == 1)
+                break;
+            fruits.remove(fruit);
+        }
         // run Dijkstra from robot's node
         DijkstraAlg(gg, robot.getSrc());
 
@@ -37,6 +43,7 @@ public class Robot_Algs {
             throw new RuntimeException("Function got no fruit!");
         }
 
+
         // first add dest, then src, then the other nodes on path
         oop_node_data n = gg.getNode(bestFruit.getDest());
         path.add(n);
@@ -58,7 +65,7 @@ public class Robot_Algs {
         return new PathAndFruit(path, bestFruit);
     }
     private static double calculateValue( Fruit fruit, double weight){
-            return 0.05*fruit.getValue() - weight;
+            return 0.08*fruit.getValue() -weight;
     }
 
 

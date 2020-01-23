@@ -9,6 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import utils.StdDraw;
 
+import javax.swing.*;
 import java.util.*;
 import java.util.List;
 
@@ -18,12 +19,29 @@ public class MyGameGUI implements Runnable {
      * @param args
      */
     public static void main(String[] args){
-        //runCompetitionLevels();
-        Thread game = new Thread(new MyGameGUI(7), "Game");
+        int level = 0;
+        int rest = 0;
+        try {
+            JFrame f;
+            f = new JFrame("Enter level");
+            level = Integer.parseInt(JOptionPane.showInputDialog(f, "Enter level between 0 and 23"));
+            rest = Integer.parseInt(JOptionPane.showInputDialog(f, "Enter sleep time in ms, or 0 to use default"));
+            if(level > 23 || level < 0)
+                throw new RuntimeException();
+        } catch (Exception e) {
+            JFrame f = new JFrame();
+            JOptionPane.showMessageDialog(f, "Bad input", "Alert", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if(rest >400 || rest < 0){
+                rest = 80;
+        }
+        Thread game = new Thread(new MyGameGUI(level, rest), "Game " + level);
         game.start();
+
     }
     // initialize game
-    private MyGameGUI(int level) {
+    private MyGameGUI(int level, int rest) {
         int myID = 208551374;
         Game_Server.login(myID);
         game = Game_Server.getServer(level);
@@ -38,30 +56,35 @@ public class MyGameGUI implements Runnable {
     @Override
     // a thread that is running while the robots are moving
     public void run() {
-        int sleepTime = 85;
         addRobots();
         game.startGame();
+        System.out.println("Starting game!\nPlaying...");
         // initialize Robot objects
         initializeRobots(game.getRobots());
-        System.out.println("Starting game!\nPlaying...");
+        //make a list of fruits that robots are after
+        List<Fruit> forbiddenFruits = new ArrayList<>();
         // playing
         while (game.isRunning()) {
             game.move();
             // update src, dest and pos of robot objects
             updateRobots(game.getRobots());
-            // iterate over robots and give each robot that is not moving a next node
-            Collection<Robot> allRobots = robots.values();
-            Iterator<Robot> itr = allRobots.iterator();
+            // iterate over robots from smallest to larges id
+            Iterator<Robot> itr = robots.values().iterator();
             while (itr.hasNext()) {
-                Robot robot = itr.next(); // get next robot
+                Robot robot = itr.next(); // get next robot by id
                 // check that robot is not moving
                 if(robot.getDest() == -1){
+                    // remove the robot's target fruit from list of target fruit
+                    forbiddenFruits.remove(robot.getTargetFruit());
                     // convert fruits to objects, this also finds the edges fruit are on
                     List<Fruit> fruits = tools.fruitsFromJsonToObject(game.getFruits(), gg);
-                    // get path to best value fruit and the chosen fruit
-                    PathAndFruit paf = Robot_Algs.pathToBestFruit(robot, fruits, gg);
+                    // get path to best value fruit and fruit itself
+                    PathAndFruit paf = Robot_Algs.pathToBestFruit(robot, fruits, forbiddenFruits, gg);
                     robot.setPath(paf.getPath());
                     robot.setTargetFruit(paf.getFruit());
+                    // add fruit to list of target fruits
+                    forbiddenFruits.add(paf.getFruit());
+
                     game.chooseNextEdge(robot.getId(), robot.getNextNode());
                 }
             }
@@ -71,7 +94,7 @@ public class MyGameGUI implements Runnable {
             StdDraw.show();
             // pause thread
             try {
-                Thread.sleep(sleepTime);
+                Thread.sleep(rest);
             }catch (InterruptedException ie){
                 System.out.println("Thread exception!");
             }
@@ -101,45 +124,13 @@ public class MyGameGUI implements Runnable {
 
 
     // run levels 0, 1, 3, ..., 23, compare scores and save to DB
-    private static void runCompetitionLevels(){
-        // int[x][y], x is for case, y is for {stage, grade and moves}
-        int[][] passTable = {{0, 145, 290}, {1, 450, 580}, {3, 720, 580}, {5, 570, 500}, {9, 510, 580},
-                {11, 1050, 580}, {13, 310, 580}, {16, 235, 290}, {19, 250, 580}, {20, 200, 290}, {23, 1000, 1140}};
-        // i is current level, j is next level from the table to be passed
-        int j = 0, i = 0;
-        while(i < 24) {
-            MyGameGUI gameGUI = new MyGameGUI(i);
-            Thread game = new Thread(gameGUI, "Level " + String.valueOf(i));
+    private static void runAllLevels(){
+        for (int i = 0; i < 24; i++) {
+            Thread game = new Thread(new MyGameGUI(i, 12), "Game" + i);
             game.start();
-            // check whether level needs to be passed
-            if(i == passTable[j][0]){
-                //get score and moves
-                int grade = -1;
-                int moves = -1;
-                try {
-                    JSONObject results = new JSONObject(game.toString());
-                    moves = results.getJSONObject("GameServer").getInt("moves");
-                    grade = results.getJSONObject("GameServer").getInt("grade");
+            while (game.isAlive()){
 
-                }catch(Exception e){
-                    System.out.println(e);
-                }
-                // check if we passed
-                if(grade > passTable[j][1] && moves < passTable[j][2]){
-                    j++;
-                }
-                else{
-                    System.out.println("You failed level: " + i + "\n Your score: " +grade
-                    +"\nRequired score: " + passTable[j][1] +"\nYour number of moves: "+ moves +
-                            "\nRequired number of moves: " + passTable[j][2]);
-                    break;
-                }
             }
-            i++;
-
-        }
-        if(i == 24){
-            System.out.println("You passed all levels!!!");
         }
     }
 
@@ -200,6 +191,7 @@ public class MyGameGUI implements Runnable {
     // private data
     private OOP_DGraph gg;
     private game_service game;
+    private int rest;
     HashMap<Integer, Robot> robots;
     painterAndLogger painter_logger;
 

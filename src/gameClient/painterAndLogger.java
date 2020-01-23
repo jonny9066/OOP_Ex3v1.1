@@ -107,7 +107,7 @@ public class painterAndLogger {
                     StdDraw.circle(p1.x(), p1.y(), 0.00015);
                     // draw score for robot
                     StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
-                    StdDraw.text(textPos.x(), textPos.y() - eps*(id+1), "Robot "+id+": "+score+" points");
+                    StdDraw.text(textPos.x(), textPos.y() - eps*(i+1), "Robot "+id+": "+score+" points");
                     // log
                     kml_log.addMovingPlacemark(p1.x(), p1.y(), "Robot "+ String.valueOf(id));
 

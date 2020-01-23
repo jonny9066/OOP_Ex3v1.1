@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import java.util.Iterator;
 
 
-public class Fruit {
+public class Fruit implements Comparable{
     /**
      * We copy the values of the fruit and find the edge it's on
      * @param json_str a JSON string representing a fruit
@@ -115,6 +115,20 @@ public class Fruit {
     private int src;
     private int dest;
     private OOP_Point3D pos;
+
+    @Override
+    // consider two fruits equal if they are very close to each other
+    public int compareTo(Object o) {
+        if(o instanceof Fruit) {
+            if (this.pos.distance2D(((Fruit) o).getPos()) < 0.000001)
+                return 0;
+        }
+        return 1;
+    }
+    @Override
+    public boolean equals(Object o){
+        return this.compareTo(o) == 0;
+    }
 }
 
 
