@@ -1,4 +1,6 @@
-# OOP_Ex3v1.1
-![showcase](https://raw.githubusercontent.com/jonny9066/OOP_Ex3v1.1/master/Screenshots/game%20example.jpg)
-The third assignment in the OOP course in the Ariel University.  
-Based in the GameServer jar that is included, this program allows to select a level and play it either manually or let the computer play for you. What you get is a GUI built using StdDraw that displays the level, the robots and the fruit.  Addittionally, every level is exported to KML for viewing the game in Google Earth (levels are based on geographical locations). Please note, that KML viewing has been tested only on Google Earth Pro, which is freely available as a download from Google.
+# OOP_Ex4
+![showcase](https://raw.githubusercontent.com/jonny9066/OOP_Ex3v1.1/master/Screenshots/ex4%20gui.jpg)
+This is the 4-th assignment in the OOP course.
+It features automated robots that collect fruit for a high score.
+It is now possible to log in to a database and upload the results to a server.
+GUI now displays the scores and info about the game. It may look similar to the previous release, however, much of the code has been rewritten.
