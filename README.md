@@ -4,5 +4,6 @@ This is the 4-th assignment in the OOP course.
 It features automated robots that collect fruit for a high score.
 It is now possible to log in to a database and upload the results to a server.
 GUI now displays the scores and info about the game. It may look similar to the previous release, however, much of the code has been rewritten.  
+To use this program, please clone it to your computer and import to your IDE, then add libraries.  
 A jar file _OOP_Ex4.jar_ is included in the root of the project for your convenience (it has been tested to work in intelliJ only).
 PLEASE NOTE, THAT OPTION FOR VIEWING CURRENT RANKING AMONG STUDENTS HAS NOT BEEN IMPLEMENTED, AS IT DID NOT WORK AT THE TIME OF WRITING THIS.
