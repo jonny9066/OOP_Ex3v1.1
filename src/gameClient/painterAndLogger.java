@@ -186,8 +186,8 @@ public class painterAndLogger {
         // set useful parameters
         double XYRatio = xLen/yLen;
         eps = xLen*0.01;
-        textPos = new OOP_Point3D((xMax+xMin)/2 - 10* eps, yMax - 2*eps);
-        statsPos = new OOP_Point3D((xMax+xMin)/2 + 10* eps, yMax - 2*eps);
+        textPos = new OOP_Point3D((xMax+xMin)/2 - 15* eps, yMax - 2*eps);
+        statsPos = new OOP_Point3D((xMax+xMin)/2 , yMax - 2*eps);
         // set parameters in StdDraw
         StdDraw.enableDoubleBuffering();
         StdDraw.setCanvasSize((int)(500 * XYRatio), 500);

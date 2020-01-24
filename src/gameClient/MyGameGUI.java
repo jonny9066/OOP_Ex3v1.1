@@ -45,6 +45,7 @@ public class MyGameGUI implements Runnable {
         int myID = 208551374;
         Game_Server.login(myID);
         game = Game_Server.getServer(level);
+        this.rest = rest;
         // initialize game graph from server
         String g = game.getGraph();
         gg = new OOP_DGraph();

@@ -48,8 +48,9 @@ public class MyDB {
                 int level = resultSet.getInt("levelID");
                 int score = resultSet.getInt("score");
                 int moves = resultSet.getInt("moves");
+                // check that level passes requirements
                 if(passMoves[level] >= moves) {
-                    if (passScore[level] < score) {
+                    if (passScore[level] <= score) {
                         // check if this score is higher than what we have
                         if (bestResults[level] < score) {
                             bestResults[level] = score;
