@@ -33,10 +33,11 @@ public class MyGameGUI implements Runnable {
             JOptionPane.showMessageDialog(f, "Bad input", "Alert", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if(rest >400 || rest < 0){
+        if(rest >300 || rest <= 0){
+            // default rest value
                 rest = 80;
         }
-        Thread game = new Thread(new MyGameGUI(level, rest), "Game " + level);
+       Thread game = new Thread(new MyGameGUI(level, rest), "Game " + level);
         game.start();
 
     }
@@ -103,23 +104,11 @@ public class MyGameGUI implements Runnable {
         // send kml
         String kml = painter_logger.saveAndGetKML();
         game.sendKML(kml);
-        //get score and moves
-        int grade = -1;
-        int moves = -1;
-        try {
-            JSONObject results = new JSONObject(game.toString());
-            moves = results.getJSONObject("GameServer").getInt("moves");
-            grade = results.getJSONObject("GameServer").getInt("grade");
+        // draw endgame screen
+        StdDraw.clear();
+        painter_logger.drawEndGame();
+        StdDraw.show();
 
-        }catch(Exception e){
-            System.out.println(e);
-        }
-
-        int[] score_moves = new int[2];
-        score_moves[0] = grade;
-        score_moves[1] = moves;
-
-        System.out.println("Game over!\nScore is: " + score_moves[0] + "\nNumber of moves is: " + score_moves[1] );
     }
 
 
@@ -127,7 +116,7 @@ public class MyGameGUI implements Runnable {
     // run levels 0, 1, 3, ..., 23, compare scores and save to DB
     private static void runAllLevels(){
         for (int i = 0; i < 24; i++) {
-            Thread game = new Thread(new MyGameGUI(i, 12), "Game" + i);
+            Thread game = new Thread(new MyGameGUI(i, 40), "Game" + i);
             game.start();
             while (game.isAlive()){
 

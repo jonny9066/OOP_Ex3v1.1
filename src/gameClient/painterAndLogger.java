@@ -121,13 +121,52 @@ public class painterAndLogger {
         StdDraw.setPenColor(StdDraw.BLACK);
         StdDraw.setFont(new Font("Arial", Font.BOLD, 10));
         StdDraw.text(textPos.x(), textPos.y() + eps, "Time left: " + String.valueOf(game.timeToEnd()/1000));
-        int m = 0;
-        for (String line : stats.split("\n")) {
-            StdDraw.text(statsPos.x(), statsPos.y() - m* eps, line);
-            m++;
+
+        if(stats != null) {
+            int m = 0;
+            for (String line : stats.split("\n")) {
+                StdDraw.text(statsPos.x(), statsPos.y() - m * eps, line);
+                m++;
+            }
         }
 
     }
+
+
+    public void drawEndGame(){
+        int grade = -1;
+        int moves = -1;
+        try {
+            JSONObject results = new JSONObject(game.toString());
+            moves = results.getJSONObject("GameServer").getInt("moves");
+            grade = results.getJSONObject("GameServer").getInt("grade");
+
+        }catch(Exception e){
+            System.out.println(e);
+        }
+
+        int[] score_moves = new int[2];
+        score_moves[0] = grade;
+        score_moves[1] = moves;
+
+        String gameOver = "Game over!\nScore is: " + score_moves[0] + "\nNumber of moves is: " + score_moves[1];
+        int m = 0;
+        for (String line : gameOver.split("\n")) {
+            StdDraw.text(statsPos.x(), statsPos.y() - m * eps, line);
+            m++;
+        }
+        // update stats
+        this.stats = MyDB.getInfo();
+
+        if(stats != null) {
+            m = 0;
+            for (String line : stats.split("\n")) {
+                StdDraw.text(statsPos.x(), statsPos.y() -( m + 5) * eps, line);
+                m++;
+            }
+        }
+    }
+
     private static Color intToColor(int i){
         int cn = i%8;
         if(i == 0){return StdDraw.CYAN; }
@@ -194,6 +233,7 @@ public class painterAndLogger {
         StdDraw.setXscale(xMin, xMax);
         StdDraw.setYscale(yMin, yMax);
     }
+
     public String saveAndGetKML(){
         String kml_str = null;
         try{
